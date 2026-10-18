@@ -246,33 +246,6 @@ fbq('track', 'PageView');
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
-  /* إخفاء زرار الحفظ الكبير بعد ما يتعمل */
-  .sticky{transition:transform .4s ease, opacity .4s ease}
-  .sticky.hidden{transform:translateY(120%);opacity:0;pointer-events:none}
-  body.saved{padding-bottom:40px}
-
-  /* الزرار الصغير لإعادة الحفظ */
-  .save-mini{
-    position:fixed;z-index:21;
-    bottom:calc(18px + env(safe-area-inset-bottom));left:18px;
-    width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
-    display:grid;place-items:center;
-    background:var(--grad);color:#fff;font-size:20px;
-    box-shadow:0 12px 26px -8px rgba(31,111,255,.65);
-    transform:scale(0);opacity:0;pointer-events:none;
-    transition:transform .35s cubic-bezier(.2,1.4,.4,1), opacity .3s;
-  }
-  body.saved .save-mini{transform:scale(1);opacity:1;pointer-events:auto}
-  .save-mini:active{transform:scale(.92)}
-  .save-mini-tip{
-    position:absolute;left:66px;white-space:nowrap;
-    background:var(--navy);color:#fff;font-family:'Cairo',sans-serif;
-    font-size:13px;font-weight:700;padding:6px 12px;border-radius:10px;
-    opacity:0;transform:translateX(-6px);transition:.3s;pointer-events:none;
-  }
-  .save-mini:hover .save-mini-tip,
-  .save-mini.tip-show .save-mini-tip{opacity:1;transform:translateX(0)                                    
-}
 </style>
 </head>
 <body>
@@ -301,8 +274,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <!-- أزرار سريعة -->
   <div class="quick" data-aos="fade-up" data-aos-delay="100">
-    <a class="q q-call" href="tel:+201222243852" data-track="phone_click" data-label="01222243852"><i class="fa-solid fa-phone"></i>اتصال</a>     
-     <a class="q q-call" href="tel:+201055111876" data-track="phone_click" data-label="01055111876"><i class="fa-solid fa-phone"></i>اتصال</a>
+    <a class="q q-call" href="tel:+201222243852" data-track="phone_click" data-label="01222243852"><i class="fa-solid fa-phone"></i>اتصال</a>
+    <a class="q q-call" href="tel:+201055111876" data-track="phone_click" data-label="01055111876"><i class="fa-solid fa-phone"></i>اتصال</a>
     <a class="q q-wa" href="https://wa.me/201222243852" target="_blank" rel="noopener" data-track="whatsapp_click" data-label="01222243852"><i class="fa-brands fa-whatsapp"></i>واتساب</a>
   </div>
 
@@ -333,10 +306,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="section-title" data-aos="fade-up"><i class="fa-solid fa-location-dot"></i> زورنا</div>
   <div class="list">
 
-    <!-- 7) جوجل ماب — ⚠️ حط لينك الـ Location من Google Maps (Share → Copy link) وامسح كلمة pending -->
-    <a class="link pending" href="https://maps.app.goo.gl/rgxETqgaf9yR6TKE8" target="_blank" rel="noopener" data-track="map_click" data-label="google_maps" data-aos="fade-up">
+    <!-- 7) جوجل ماب -->
+    <a class="link" href="https://maps.app.goo.gl/rgxETqgaf9yR6TKE8" target="_blank" rel="noopener" data-track="map_click" data-label="google_maps" data-aos="fade-up">
       <div class="ic"><i class="fa-solid fa-map-location-dot"></i></div>
-      <div class="txt"><strong>موقعنا على الخريطة </strong><span>Google Maps</span></div>
+      <div class="txt"><strong>موقعنا على الخريطة</strong><span>Google Maps</span></div>
       <div class="go"><i class="fa-solid fa-arrow-left"></i></div>
     </a>
 
@@ -373,11 +346,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- زرار حفظ جهة الاتصال ثابت تحت -->
 <div class="sticky">
   <button class="save" type="button" data-save data-track="save_contact"><i class="fa-solid fa-user-plus"></i> احفظ جهة الاتصال</button>
-<!-- زرار صغير لإعادة الحفظ — بيظهر بعد ما الزرار الكبير يختفي -->
-<button class="save-mini" type="button" data-save data-track="save_contact_again" aria-label="حفظ جهة الاتصال مرة تانية">
-  <i class="fa-solid fa-user-plus"></i>
-  <span class="save-mini-tip">احفظ تاني</span>
-</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -425,52 +393,88 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
   });
 
-  // ===== تحميل vCard =====
-  // ===== تحميل vCard + إخفاء الزرار الكبير وإظهار الصغير =====
-  var SAVED_KEY = 'dmw_contact_saved';
-  var sticky = document.querySelector('.sticky');
-  var mini = document.querySelector('.save-mini');
+  // ===== زرار حفظ جهة الاتصال (الكبير + الصغير لإعادة الحفظ) =====
+  (function(){
+    var SAVED_KEY = 'dmw_contact_saved';
 
-  function switchToMini(showTip){
-    if (sticky) sticky.classList.add('hidden');
-    document.body.classList.add('saved');
-    // يظهر كلمة "احفظ تاني" جنب الزرار الصغير لثواني عشان العميل ياخد باله منه
-    if (showTip && mini){
-      setTimeout(function(){ mini.classList.add('tip-show'); }, 500);
-      setTimeout(function(){ mini.classList.remove('tip-show'); }, 3500);
+    // 1) الستايل بتاع الزرار الصغير
+    var css = document.createElement('style');
+    css.textContent =
+      '.sticky{transition:transform .4s ease,opacity .4s ease}' +
+      '.sticky.hidden{transform:translateY(120%);opacity:0;pointer-events:none}' +
+      'body.saved{padding-bottom:40px}' +
+      '#saveMini{position:fixed;z-index:9999;bottom:calc(18px + env(safe-area-inset-bottom));left:18px;' +
+        'width:58px;height:58px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;' +
+        'background:linear-gradient(135deg,#00c8ff,#1f6fff,#7a3cff);color:#fff;font-size:21px;' +
+        'box-shadow:0 12px 26px -8px rgba(31,111,255,.7);' +
+        'transform:scale(0);opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.2,1.4,.4,1),opacity .3s}' +
+      'body.saved #saveMini{transform:scale(1);opacity:1;pointer-events:auto}' +
+      '#saveMini .tip{position:absolute;left:68px;white-space:nowrap;background:#0e1a3b;color:#fff;' +
+        'font-family:Cairo,sans-serif;font-size:13px;font-weight:700;padding:6px 12px;border-radius:10px;' +
+        'opacity:0;transform:translateX(-6px);transition:.3s;pointer-events:none}' +
+      '#saveMini:hover .tip,#saveMini.tip-show .tip{opacity:1;transform:translateX(0)}';
+    document.head.appendChild(css);
+
+    // 2) الزرار الصغير بيتعمل أوتوماتيك وبيتحط مباشرة في الـ body
+    var mini = document.getElementById('saveMini');
+    if (!mini){
+      mini = document.createElement('button');
+      mini.id = 'saveMini';
+      mini.type = 'button';
+      mini.setAttribute('aria-label','حفظ جهة الاتصال مرة تانية');
+      mini.innerHTML = '<i class="fa-solid fa-user-plus"></i><span class="tip">احفظ تاني</span>';
+      document.body.appendChild(mini);
     }
-  }
 
-  // لو الزائر حفظ قبل كده: الزرار الصغير بس اللي يظهر
-  try { if (localStorage.getItem(SAVED_KEY) === '1') switchToMini(false); } catch(e){}
+    var sticky = document.querySelector('.sticky');
 
-  function downloadVCard(){
-    var v = [
-      'BEGIN:VCARD','VERSION:3.0',
-      'FN:DevMediaWorx','ORG:DevMediaWorx',
-      'TITLE:Development • Media • Technology Solutions',
-      'TEL;TYPE=CELL:+201222243852',
-      'TEL;TYPE=CELL:+201055111876',
-      'EMAIL;TYPE=WORK:nour@devmediaworx.com',
-      'EMAIL;TYPE=WORK:nagy@devmediaworx.com',
-      'URL:https://devmediaworx.com',
-      'END:VCARD'
-    ].join('\r\n');
-    var blob = new Blob([v], {type:'text/vcard;charset=utf-8'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'DevMediaWorx.vcf';
-    document.body.appendChild(a); a.click(); a.remove();
-  }
+    function switchToMini(showTip){
+      if (sticky) sticky.classList.add('hidden');
+      document.body.classList.add('saved');
+      if (showTip){
+        setTimeout(function(){ mini.classList.add('tip-show'); }, 500);
+        setTimeout(function(){ mini.classList.remove('tip-show'); }, 3500);
+      }
+    }
 
-  document.querySelectorAll('[data-save]').forEach(function(btn){
-    btn.addEventListener('click', function(){
+    function downloadVCard(){
+      var v = [
+        'BEGIN:VCARD','VERSION:3.0',
+        'FN:DevMediaWorx','ORG:DevMediaWorx',
+        'TITLE:Development • Media • Technology Solutions',
+        'TEL;TYPE=CELL:+201222243852',
+        'TEL;TYPE=CELL:+201055111876',
+        'EMAIL;TYPE=WORK:nour@devmediaworx.com',
+        'EMAIL;TYPE=WORK:nagy@devmediaworx.com',
+        'URL:https://devmediaworx.com',
+        'END:VCARD'
+      ].join('\r\n');
+      var blob = new Blob([v], {type:'text/vcard;charset=utf-8'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'DevMediaWorx.vcf';
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function onSave(isAgain){
       downloadVCard();
-      toast('تم حفظ جهة الاتصال ✓');
+      if (typeof toast === 'function') toast('تم حفظ جهة الاتصال ✓');
+      if (typeof trackEvent === 'function') trackEvent(isAgain ? 'save_contact_again' : 'save_contact', '');
       try { localStorage.setItem(SAVED_KEY, '1'); } catch(e){}
       setTimeout(function(){ switchToMini(true); }, 600);
+    }
+
+    // الزرار الكبير (وأي زرار تاني عليه data-save)
+    document.querySelectorAll('[data-save]').forEach(function(btn){
+      btn.removeAttribute('data-track'); // التراكينج بيتعمل جوه onSave
+      btn.addEventListener('click', function(){ onSave(false); });
     });
-  });
+    // الزرار الصغير
+    mini.addEventListener('click', function(){ onSave(true); });
+
+    // لو الزائر حفظ قبل كده: الصغير بس اللي يظهر
+    try { if (localStorage.getItem(SAVED_KEY) === '1') switchToMini(false); } catch(e){}
+  })();
 </script>
 </body>
 </html>
