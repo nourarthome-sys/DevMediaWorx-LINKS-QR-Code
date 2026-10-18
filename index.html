@@ -246,6 +246,33 @@ fbq('track', 'PageView');
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
+  /* إخفاء زرار الحفظ الكبير بعد ما يتعمل */
+  .sticky{transition:transform .4s ease, opacity .4s ease}
+  .sticky.hidden{transform:translateY(120%);opacity:0;pointer-events:none}
+  body.saved{padding-bottom:40px}
+
+  /* الزرار الصغير لإعادة الحفظ */
+  .save-mini{
+    position:fixed;z-index:21;
+    bottom:calc(18px + env(safe-area-inset-bottom));left:18px;
+    width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
+    display:grid;place-items:center;
+    background:var(--grad);color:#fff;font-size:20px;
+    box-shadow:0 12px 26px -8px rgba(31,111,255,.65);
+    transform:scale(0);opacity:0;pointer-events:none;
+    transition:transform .35s cubic-bezier(.2,1.4,.4,1), opacity .3s;
+  }
+  body.saved .save-mini{transform:scale(1);opacity:1;pointer-events:auto}
+  .save-mini:active{transform:scale(.92)}
+  .save-mini-tip{
+    position:absolute;left:66px;white-space:nowrap;
+    background:var(--navy);color:#fff;font-family:'Cairo',sans-serif;
+    font-size:13px;font-weight:700;padding:6px 12px;border-radius:10px;
+    opacity:0;transform:translateX(-6px);transition:.3s;pointer-events:none;
+  }
+  .save-mini:hover .save-mini-tip,
+  .save-mini.tip-show .save-mini-tip{opacity:1;transform:translateX(0)                                    
+}
 </style>
 </head>
 <body>
@@ -346,6 +373,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- زرار حفظ جهة الاتصال ثابت تحت -->
 <div class="sticky">
   <button class="save" type="button" data-save data-track="save_contact"><i class="fa-solid fa-user-plus"></i> احفظ جهة الاتصال</button>
+<!-- زرار صغير لإعادة الحفظ — بيظهر بعد ما الزرار الكبير يختفي -->
+<button class="save-mini" type="button" data-save data-track="save_contact_again" aria-label="حفظ جهة الاتصال مرة تانية">
+  <i class="fa-solid fa-user-plus"></i>
+  <span class="save-mini-tip">احفظ تاني</span>
+</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -394,25 +426,49 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   });
 
   // ===== تحميل vCard =====
+  // ===== تحميل vCard + إخفاء الزرار الكبير وإظهار الصغير =====
+  var SAVED_KEY = 'dmw_contact_saved';
+  var sticky = document.querySelector('.sticky');
+  var mini = document.querySelector('.save-mini');
+
+  function switchToMini(showTip){
+    if (sticky) sticky.classList.add('hidden');
+    document.body.classList.add('saved');
+    // يظهر كلمة "احفظ تاني" جنب الزرار الصغير لثواني عشان العميل ياخد باله منه
+    if (showTip && mini){
+      setTimeout(function(){ mini.classList.add('tip-show'); }, 500);
+      setTimeout(function(){ mini.classList.remove('tip-show'); }, 3500);
+    }
+  }
+
+  // لو الزائر حفظ قبل كده: الزرار الصغير بس اللي يظهر
+  try { if (localStorage.getItem(SAVED_KEY) === '1') switchToMini(false); } catch(e){}
+
+  function downloadVCard(){
+    var v = [
+      'BEGIN:VCARD','VERSION:3.0',
+      'FN:DevMediaWorx','ORG:DevMediaWorx',
+      'TITLE:Development • Media • Technology Solutions',
+      'TEL;TYPE=CELL:+201222243852',
+      'TEL;TYPE=CELL:+201055111876',
+      'EMAIL;TYPE=WORK:nour@devmediaworx.com',
+      'EMAIL;TYPE=WORK:nagy@devmediaworx.com',
+      'URL:https://devmediaworx.com',
+      'END:VCARD'
+    ].join('\r\n');
+    var blob = new Blob([v], {type:'text/vcard;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'DevMediaWorx.vcf';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
   document.querySelectorAll('[data-save]').forEach(function(btn){
     btn.addEventListener('click', function(){
-      var v = [
-        'BEGIN:VCARD','VERSION:3.0',
-        'FN:DevMediaWorx','ORG:DevMediaWorx',
-        'TITLE:Development • Media • Technology Solutions',
-        'TEL;TYPE=CELL:+201222243852',
-        'TEL;TYPE=CELL:+201055111876',
-        'EMAIL;TYPE=WORK:nour@devmediaworx.com',
-        'EMAIL;TYPE=WORK:nagy@devmediaworx.com',
-        'URL:https://devmediaworx.com',
-        'END:VCARD'
-      ].join('\r\n');
-      var blob = new Blob([v], {type:'text/vcard;charset=utf-8'});
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'DevMediaWorx.vcf';
-      document.body.appendChild(a); a.click(); a.remove();
-      toast('جاري حفظ جهة الاتصال…');
+      downloadVCard();
+      toast('تم حفظ جهة الاتصال ✓');
+      try { localStorage.setItem(SAVED_KEY, '1'); } catch(e){}
+      setTimeout(function(){ switchToMini(true); }, 600);
     });
   });
 </script>
